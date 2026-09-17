@@ -1,0 +1,10 @@
+node_modules
+dist
+.DS_Store
+*.local
+tsconfig.tsbuildinfo
+.idea/
+report.txt
+report-team.txt
+
+.claude/settings.local.json
