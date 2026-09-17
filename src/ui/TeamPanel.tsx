@@ -229,6 +229,7 @@ export function TeamPanel({ teamName, codes, onChange }: { teamName: string; cod
             {diagnosis.members.map((m, i) => (
               <div className="member" key={`${m.name}-${i}`}>
                 <span className="name">{m.name}</span>
+                {m.jobLabel && <span className="job-tag">{m.jobLabel}</span>}
                 <span className="gz">{chartToKorean(m.chart)}</span>
                 <span className="role">{m.role.role}</span>
                 <button className="btn danger" type="button" onClick={() => removeAt(i)} aria-label={`${m.name} 삭제`}>
@@ -400,6 +401,54 @@ export function TeamPanel({ teamName, codes, onChange }: { teamName: string; cod
                 </div>
               )}
             </div>
+
+            {diagnosis.jobGroups.length > 0 && (
+              <div className="card">
+                <h2>직무</h2>
+                <p className="sub">직무는 각자 고른 값입니다. 사주로 직무를 추천하지 않습니다.</p>
+
+                <table className="roles">
+                  <tbody>
+                    {diagnosis.jobGroups.map((g) => (
+                      <tr key={g.job}>
+                        <td>{g.label}</td>
+                        <td>
+                          <b>{g.members.join(', ')}</b>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div className="stack" style={{ marginTop: 18 }}>
+                  {diagnosis.members
+                    .filter((m) => m.jobStyle)
+                    .map((m) => (
+                      <div className="finding" key={m.index}>
+                        <h4>
+                          {m.name}{' '}
+                          <span className="tiny">
+                            {m.jobLabel} · {m.role.role}
+                          </span>
+                        </h4>
+                        <p>{m.jobStyle}</p>
+                      </div>
+                    ))}
+
+                  {diagnosis.jobOverlaps.map((o) => (
+                    <div className="finding notable" key={`${o.job}-${o.family}`}>
+                      <h4>
+                        겹침 · {o.label}에 {ROLE_BY_FAMILY[o.family].role} 성향이 둘 이상
+                        <span className="badge">주목</span>
+                      </h4>
+                      <p className="tip">
+                        {o.members.join(', ')} — {o.text}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <p className="disclaimer">{diagnosis.disclaimer}</p>
           </div>

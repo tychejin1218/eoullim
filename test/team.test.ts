@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import { buildChart, type Chart, chartToKorean } from '@/core/pillars';
 import { diagnoseTeam, TeamError } from '@/core/team';
-import { ELEMENTS, GOD_FAMILIES } from '@/data/tables';
+import { JOB_STYLE, ROLE_BY_FAMILY } from '@/data/corpus';
+import { ELEMENTS, GOD_FAMILIES, type GodFamily, type Job } from '@/data/tables';
 
 const person = (name: string, y: number, m: number, d: number, h: number | null = 12): Chart =>
   buildChart({ name, calendar: 'solar', year: y, month: m, day: d, hour: h });
@@ -179,13 +180,58 @@ describe('리포트', () => {
   });
 });
 
-function ROLE(f: string): string {
-  const map: Record<string, string> = {
-    비겁: '실행 · 추진',
-    식상: '기획 · 커뮤니케이션',
-    재성: '일정 · 리소스',
-    관성: '품질 · 프로세스',
-    인성: '리서치 · 설계',
-  };
-  return map[f] ?? f;
+/** 라벨은 corpus 를 단일 출처로 쓴다 — 하드코딩하면 조용히 어긋난다 */
+function ROLE(f: GodFamily): string {
+  return ROLE_BY_FAMILY[f].role;
 }
+
+describe('직무 진단', () => {
+  const withJob = (name: string, y: number, m: number, d: number, h: number, job: Job): Chart =>
+    buildChart({ name, calendar: 'solar', year: y, month: m, day: d, hour: h, job });
+
+  it('직무를 아무도 안 고르면 빈 배열', () => {
+    const d = diagnoseTeam(TEAM);
+    expect(d.jobGroups).toEqual([]);
+    expect(d.jobOverlaps).toEqual([]);
+    expect(d.members.every((m) => m.job === undefined)).toBe(true);
+  });
+
+  it('직무별로 묶어준다', () => {
+    const d = diagnoseTeam([withJob('지영', 1990, 5, 15, 14, 'PM'), withJob('현우', 1993, 11, 3, 9, 'FE'), withJob('민서', 1988, 2, 27, 21, 'FE')]);
+    const fe = d.jobGroups.find((g) => g.job === 'FE');
+    expect(fe?.members).toEqual(['현우', '민서']);
+    expect(fe?.label).toBe('프론트엔드');
+    expect(d.jobGroups.find((g) => g.job === 'PM')?.members).toEqual(['지영']);
+  });
+
+  it('직무 × 성향 문장이 붙는다', () => {
+    const d = diagnoseTeam([withJob('지영', 1990, 5, 15, 14, 'PM')]);
+    const m = d.members[0]!;
+    expect(m.jobLabel).toBe('프로젝트 매니저');
+    expect(m.jobStyle).toBeTruthy();
+    expect(m.jobStyle).toBe(JOB_STYLE.PM[m.role.family]);
+  });
+
+  it("'그 외'는 직무 문장을 만들지 않는다", () => {
+    const d = diagnoseTeam([withJob('지영', 1990, 5, 15, 14, 'ET')]);
+    expect(d.members[0]!.jobLabel).toBe('그 외');
+    expect(d.members[0]!.jobStyle).toBeUndefined();
+  });
+
+  it('같은 직무 + 같은 성향이면 겹침으로 잡는다', () => {
+    // 같은 사주를 이름만 바꿔 넣으면 성향이 반드시 같다
+    const a = withJob('현우', 1993, 11, 3, 9, 'FE');
+    const b = { ...withJob('민서', 1993, 11, 3, 9, 'FE'), name: '민서' };
+    const d = diagnoseTeam([a, b]);
+    expect(d.jobOverlaps).toHaveLength(1);
+    expect(d.jobOverlaps[0]!.job).toBe('FE');
+    expect(d.jobOverlaps[0]!.members).toEqual(['현우', '민서']);
+    expect(d.jobOverlaps[0]!.text).toBeTruthy();
+  });
+
+  it('직무가 같아도 성향이 다르면 겹침이 아니다', () => {
+    const d = diagnoseTeam([withJob('현우', 1993, 11, 3, 9, 'FE'), withJob('태경', 1996, 7, 9, 6, 'FE')]);
+    const families = d.members.map((m) => m.role.family);
+    if (families[0] !== families[1]) expect(d.jobOverlaps).toHaveLength(0);
+  });
+});

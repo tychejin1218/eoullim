@@ -9,7 +9,7 @@
 
 import { Lunar, LunarMonth, LunarYear, Solar } from 'lunar-typescript';
 
-import { BRANCH, type Branch, isBranch, isStem, type PillarLabel, STEM, type Stem, toKorean } from '@/data/tables';
+import { BRANCH, type Branch, isBranch, isJob, isStem, type Job, type PillarLabel, STEM, type Stem, toKorean } from '@/data/tables';
 
 import { SEOUL_LONGITUDE, trueSolarShiftMinutes } from './truesolar';
 
@@ -38,6 +38,8 @@ export interface BirthInput {
   /** 출생지 경도 °E (기본 서울) */
   longitude?: number;
   sect?: Sect;
+  /** 직무. 사주로 추천하지 않고 사용자가 고른다 */
+  job?: Job;
 }
 
 export interface Pillar {
@@ -53,6 +55,8 @@ export interface Chart {
   dayStem: Stem;
   dayBranch: Branch;
   timeKnown: boolean;
+  /** 사용자가 고른 직무. 고르지 않았으면 없다 */
+  job?: Job;
   /** 팀원끼리 공유하는 코드. 생년월일이 들어 있지 않다 */
   code: string;
   /**
@@ -189,7 +193,8 @@ export function buildChart(input: BirthInput): Chart {
     dayStem: dayPillar.stem,
     dayBranch: dayPillar.branch,
     timeKnown,
-    code: encodeChart(name.trim(), pillars),
+    job: input.job,
+    code: encodeChart(name.trim(), pillars, input.job),
     birth: {
       solar: `${solar.getYear()}.${pad(solar.getMonth())}.${pad(solar.getDay())}`,
       lunar: `${lunar.getYear()}.${pad(Math.abs(lunarMonth))}.${pad(lunar.getDay())}${lunarMonth < 0 ? ' (윤달)' : ''}`,
@@ -210,17 +215,30 @@ function pad(n: number): string {
  *
  *   "지영|庚午辛巳庚辰壬午"
  */
-export function encodeChart(name: string, pillars: Pillar[]): string {
-  return `${name}|${pillars.map((p) => p.stem + p.branch).join('')}`;
+export function encodeChart(name: string, pillars: Pillar[], job?: Job): string {
+  const body = pillars.map((p) => p.stem + p.branch).join('');
+  return job ? `${name}|${body}|${job}` : `${name}|${body}`;
 }
 
 /** 팔자 코드를 Chart로 되돌린다. 생년월일 정보는 복원되지 않는다. */
 export function decodeChart(code: string): Chart {
-  const sep = code.lastIndexOf('|');
-  if (sep < 1) throw new BirthInputError('코드 형식이 올바르지 않습니다. 예) 지영|庚午辛巳庚辰壬午');
+  // 이름에 '|' 가 들어갈 수 있어서 오른쪽부터 떼어낸다.
+  // 맨 뒤가 알려진 직무 약어일 때만 직무로 본다 (직무 없는 옛 코드와 호환).
+  const parts = code.split('|');
+  if (parts.length < 2) throw new BirthInputError('코드 형식이 올바르지 않습니다. 예) 지영|庚午辛巳庚辰壬午');
 
-  const name = code.slice(0, sep).trim();
-  const body = code.slice(sep + 1).replace(/\s/g, '');
+  let job: Job | undefined;
+  if (parts.length >= 3) {
+    const tail = parts[parts.length - 1]!.trim();
+    if (isJob(tail)) {
+      job = tail;
+      parts.pop();
+    }
+  }
+
+  const body = (parts.pop() ?? '').replace(/\s/g, '');
+  const name = parts.join('|').trim();
+  if (!name) throw new BirthInputError('코드 형식이 올바르지 않습니다. 예) 지영|庚午辛巳庚辰壬午');
   if (body.length !== 6 && body.length !== 8) {
     throw new BirthInputError('팔자는 6자(시간 모름) 또는 8자여야 합니다.');
   }
@@ -242,7 +260,8 @@ export function decodeChart(code: string): Chart {
     dayStem: dayPillar.stem,
     dayBranch: dayPillar.branch,
     timeKnown: pillars.length === 4,
-    code: encodeChart(name, pillars),
+    job,
+    code: encodeChart(name, pillars, job),
   };
 }
 

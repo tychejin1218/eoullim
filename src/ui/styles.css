@@ -561,3 +561,12 @@ table.matrix td button[aria-pressed='true'] {
 .help .roles td:first-child {
   width: 128px;
 }
+
+.job-tag {
+  font-size: 11.5px;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-radius: 20px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}

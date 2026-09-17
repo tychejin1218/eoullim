@@ -13,10 +13,19 @@ export type TenGod = '비견' | '겁재' | '식신' | '상관' | '편재' | '정
 export type GodFamily = '비겁' | '식상' | '재성' | '관성' | '인성';
 export type PillarLabel = '년주' | '월주' | '일주' | '시주';
 
+/**
+ * 직무. 사주로 추천하는 게 아니라 **사용자가 직접 고르는 입력**이다.
+ * 십성이 "어떻게 일하는가"라면 직무는 "무엇을 하는가"로, 두 축을 겹쳐 본다.
+ *
+ * 값이 곧 팔자 코드에 실리는 약어이므로 한 번 정하면 바꾸지 않는다.
+ */
+export type Job = 'PM' | 'PL' | 'DS' | 'FE' | 'BE' | 'QA' | 'ET';
+
 export const STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'] as const;
 export const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'] as const;
 export const ELEMENTS = ['목', '화', '토', '금', '수'] as const;
 export const GOD_FAMILIES = ['비겁', '식상', '재성', '관성', '인성'] as const;
+export const JOBS = ['PM', 'PL', 'DS', 'FE', 'BE', 'QA', 'ET'] as const;
 
 export interface StemInfo {
   ko: string;
@@ -113,6 +122,10 @@ export function isStem(v: string): v is Stem {
 
 export function isBranch(v: string): v is Branch {
   return (BRANCHES as readonly string[]).includes(v);
+}
+
+export function isJob(v: string): v is Job {
+  return (JOBS as readonly string[]).includes(v);
 }
 
 /** 甲子 → '갑자' */

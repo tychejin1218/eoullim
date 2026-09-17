@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 
 import { BirthInputError, buildChart, type CalendarType, type Chart, chartToKorean, leapMonthOf, lunarMonthDayCount, type Sect } from '@/core/pillars';
-import { BRANCH, STEM } from '@/data/tables';
+import { JOB_LABEL } from '@/data/corpus';
+import { BRANCH, type Job, JOBS, STEM } from '@/data/tables';
 
 const THIS_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: THIS_YEAR - 1919 }, (_, i) => THIS_YEAR - i);
@@ -15,6 +16,7 @@ function daysInMonth(calendar: CalendarType, year: number, month: number, leap: 
 
 export function BirthForm({ onAdd }: { onAdd?: (code: string) => void }) {
   const [name, setName] = useState('');
+  const [job, setJob] = useState<Job | ''>('');
   const [calendar, setCalendar] = useState<CalendarType>('solar');
   const [leap, setLeap] = useState(false);
   const [year, setYear] = useState(1990);
@@ -52,6 +54,8 @@ export function BirthForm({ onAdd }: { onAdd?: (code: string) => void }) {
           minute: timeKnown ? minute : 0,
           trueSolar,
           sect,
+          // 안 골랐으면 코드에 아무것도 붙이지 않는다
+          job: job || undefined,
         }),
       );
       setError(null);
@@ -83,6 +87,19 @@ export function BirthForm({ onAdd }: { onAdd?: (code: string) => void }) {
           <label className="field">
             이름 또는 닉네임
             <input type="text" maxLength={12} value={name} autoComplete="off" placeholder="최대 12자" onChange={(e) => setName(e.target.value)} />
+          </label>
+
+          <label className="field">
+            직무
+            <select value={job} onChange={(e) => setJob(e.target.value as Job | '')}>
+              <option value="">선택 안 함</option>
+              {JOBS.map((j) => (
+                <option key={j} value={j}>
+                  {JOB_LABEL[j]}
+                </option>
+              ))}
+            </select>
+            <span className="tiny">사주로 직무를 추천하지 않습니다. 고른 직무와 성향을 겹쳐서 보여주기 위한 입력입니다.</span>
           </label>
 
           <div className="field">

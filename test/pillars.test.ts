@@ -156,3 +156,56 @@ describe('팔자 코드', () => {
     expect(() => decodeChart('지영|XX辛巳庚辰壬午')).toThrow(/천간/);
   });
 });
+
+describe('직무', () => {
+  const base = { name: '지영', calendar: 'solar', year: 1990, month: 5, day: 15, hour: 12, trueSolar: false } as const;
+
+  it('직무를 고르면 코드 끝에 붙는다', () => {
+    const c = buildChart({ ...base, job: 'FE' });
+    expect(c.code).toBe('지영|庚午辛巳庚辰壬午|FE');
+    expect(c.job).toBe('FE');
+  });
+
+  it('직무를 안 고르면 예전 형식 그대로', () => {
+    const c = buildChart(base);
+    expect(c.code).toBe('지영|庚午辛巳庚辰壬午');
+    expect(c.job).toBeUndefined();
+  });
+
+  it('직무 없는 옛 코드도 그대로 읽힌다', () => {
+    const c = decodeChart('지영|庚午辛巳庚辰壬午');
+    expect(c.job).toBeUndefined();
+    expect(c.pillars).toHaveLength(4);
+  });
+
+  it('직무가 붙은 코드를 되돌린다', () => {
+    const origin = buildChart({ ...base, job: 'BE' });
+    const restored = decodeChart(origin.code);
+    expect(restored.job).toBe('BE');
+    expect(restored.name).toBe('지영');
+    expect(restored.pillars).toEqual(origin.pillars);
+    expect(restored.birth).toBeUndefined();
+  });
+
+  it('시간 모름 + 직무', () => {
+    const c = buildChart({ ...base, hour: null, job: 'QA' });
+    expect(c.code).toBe('지영|庚午辛巳庚辰|QA');
+    expect(decodeChart(c.code).timeKnown).toBe(false);
+  });
+
+  it('이름에 | 가 있어도 직무를 구분한다', () => {
+    const c = decodeChart('김|지영|庚午辛巳庚辰壬午|DS');
+    expect(c.name).toBe('김|지영');
+    expect(c.job).toBe('DS');
+  });
+
+  it('이름이 직무 약어와 같아도 팔자를 직무로 오인하지 않는다', () => {
+    const c = decodeChart('FE|庚午辛巳庚辰壬午');
+    expect(c.name).toBe('FE');
+    expect(c.job).toBeUndefined();
+  });
+
+  it('알 수 없는 꼬리표는 직무로 보지 않는다', () => {
+    expect(() => decodeChart('지영|庚午辛巳庚辰壬午|XX')).toThrow(/6자|8자/);
+  });
+});

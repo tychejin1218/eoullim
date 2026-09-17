@@ -10,8 +10,19 @@
  * 원점수를 합산하지 않고 각자의 백분율을 평균낸다.
  */
 
-import { type DiagnosisText, DISCLAIMER, ROLE_BY_FAMILY, type RoleText, TEAM_EXCESS, TEAM_LACK, TEAM_ROLE_GAP } from '@/data/corpus';
-import { type Element, ELEMENTS, GOD_FAMILIES, type GodFamily } from '@/data/tables';
+import {
+  type DiagnosisText,
+  DISCLAIMER,
+  JOB_LABEL,
+  JOB_STYLE,
+  ROLE_BY_FAMILY,
+  type RoleText,
+  SAME_JOB_SAME_STYLE,
+  TEAM_EXCESS,
+  TEAM_LACK,
+  TEAM_ROLE_GAP,
+} from '@/data/corpus';
+import { type Element, ELEMENTS, GOD_FAMILIES, type GodFamily, type Job, JOBS } from '@/data/tables';
 
 import { type Compatibility, compatibility } from './compat';
 import { type DayStrength, dayStrength, elementPercent, type ElementScores, strongestElement, toPercent, weakestElement } from './elements';
@@ -55,6 +66,11 @@ export interface TeamMember {
   tenGod: TenGodProfile;
   /** 가장 두꺼운 십성 그룹에서 나온 역할 추천 */
   role: RoleText & { family: GodFamily };
+  /** 사용자가 고른 직무 */
+  job?: Job;
+  jobLabel?: string;
+  /** 직무 × 성향 한 줄. 직무를 안 골랐거나 '그 외'면 없다 */
+  jobStyle?: string;
 }
 
 export interface ElementFinding extends DiagnosisText {
@@ -64,6 +80,21 @@ export interface ElementFinding extends DiagnosisText {
   severity: number;
   /** 눈에 띄게 치우쳤는가. UI에서 강조 여부로 쓴다 */
   notable: boolean;
+}
+
+/** 같은 직무를 같은 성향으로 하는 사람들 */
+export interface JobOverlap {
+  job: Job;
+  label: string;
+  family: GodFamily;
+  members: string[];
+  text: string;
+}
+
+export interface JobGroup {
+  job: Job;
+  label: string;
+  members: string[];
 }
 
 export interface RoleGap {
@@ -93,6 +124,10 @@ export interface TeamDiagnosis {
   roleCoverage: Record<GodFamily, string[]>;
   /** 아무도 맡지 않은 역할. 팀 비중이 낮은 순 */
   roleGaps: RoleGap[];
+  /** 직무 구성. 아무도 직무를 고르지 않았으면 빈 배열 */
+  jobGroups: JobGroup[];
+  /** 같은 직무 + 같은 성향 조합 */
+  jobOverlaps: JobOverlap[];
   disclaimer: string;
 }
 
@@ -109,6 +144,7 @@ function describeMember(chart: Chart, index: number): TeamMember {
   const tenGod = tenGodProfile(chart.pillars, chart.dayStem);
   const family = tenGod.topFamily;
 
+  const job = chart.job;
   return {
     index,
     name: chart.name,
@@ -117,6 +153,10 @@ function describeMember(chart: Chart, index: number): TeamMember {
     strength: dayStrength(chart.dayStem, percent),
     tenGod,
     role: { family, ...ROLE_BY_FAMILY[family] },
+    job,
+    jobLabel: job ? JOB_LABEL[job] : undefined,
+    // 'ET'(그 외)는 직무 특성을 특정할 수 없어 문장을 두지 않는다
+    jobStyle: job && job !== 'ET' ? JOB_STYLE[job][family] : undefined,
   };
 }
 
@@ -201,6 +241,29 @@ export function diagnoseTeam(charts: Chart[]): TeamDiagnosis {
     .sort((a, b) => familyShare[a] - familyShare[b])
     .map((f) => ({ family: f, role: ROLE_BY_FAMILY[f].role, text: TEAM_ROLE_GAP[f] }));
 
+  // ── 직무
+  const jobGroups: JobGroup[] = JOBS.map((job) => ({
+    job,
+    label: JOB_LABEL[job],
+    members: members.filter((m) => m.job === job).map((m) => m.name),
+  })).filter((g) => g.members.length > 0);
+
+  const jobOverlaps: JobOverlap[] = [];
+  for (const group of jobGroups) {
+    for (const family of GOD_FAMILIES) {
+      const same = members.filter((m) => m.job === group.job && m.role.family === family);
+      if (same.length >= 2) {
+        jobOverlaps.push({
+          job: group.job,
+          label: group.label,
+          family,
+          members: same.map((m) => m.name),
+          text: SAME_JOB_SAME_STYLE,
+        });
+      }
+    }
+  }
+
   return {
     members,
     elements,
@@ -213,6 +276,8 @@ export function diagnoseTeam(charts: Chart[]): TeamDiagnosis {
     hardestPair: ranked.length > 1 ? ranked[ranked.length - 1]! : null,
     roleCoverage,
     roleGaps,
+    jobGroups,
+    jobOverlaps,
     disclaimer: DISCLAIMER,
   };
 }
