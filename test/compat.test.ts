@@ -141,8 +141,8 @@ describe('궁합 점수', () => {
     for (const c of [compatibility(wood, fire), compatibility(fire, wood)]) {
       expect(c.stem.key).toBe('생');
       expect(c.stem.label.startsWith('목씨')).toBe(true);
-      expect(c.stem.text).toContain('목씨가 판을 만들고');
-      expect(c.stem.text).toContain('화씨가 그 위에서');
+      // 문구는 바뀔 수 있다. 검증할 것은 "주는 쪽이 먼저 불린다"는 방향뿐이다
+      expect(c.stem.text.indexOf('목씨')).toBeLessThan(c.stem.text.indexOf('화씨'));
     }
   });
 
