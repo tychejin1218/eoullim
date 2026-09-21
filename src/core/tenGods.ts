@@ -1,8 +1,11 @@
 /**
  * 십성(十星)
  *
- * 일간(나)을 기준으로 다른 글자가 어떤 관계인지를 열 가지로 나눈 것.
- * 이 프로젝트에서는 역할 추천의 근거로 쓴다.
+ * 일간(나)을 기준으로 다른 글자가 어느 방향에 있는지를 열 가지로 나눈 것.
+ * 다섯 그룹(GodFamily)이 음양으로 갈려 10이 된다 — 그룹별 의미는 data/tables.ts 의 GodFamily 주석 참고.
+ *
+ * 이 프로젝트에서는 **"어떻게 일하는가"(ROLE_BY_FAMILY)의 근거**로만 쓴다.
+ * 직무를 추천하는 데 쓰지 않는다 — 직무는 사용자가 고르는 별도 입력이다.
  */
 
 import { BRANCH, CONTROLS, GENERATES, GOD_FAMILIES, GOD_FAMILY, type GodFamily, STEM, type Stem, type TenGod } from '@/data/tables';
